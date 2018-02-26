@@ -1,0 +1,15 @@
+{% extends 'core/base.html' %}
+{% load stripaccents %}
+{% load static %}
+
+{% block content %}
+    <div class="row">
+        {% for muni in munis %}
+        <div class="col-xs-12 col-sm-6 col-md-3">
+            {% with 'core/img/'|add:muni.name.lower|add:'.jpg'|stripaccents as m_img %}
+                <a href="{% url 'muni' muni.id%}"><img class="center-block img-responsive" src="{% static m_img %}" />{{ muni.name }}</a>
+            {% endwith %}
+        </div>
+        {% endfor %}
+    </div>
+{% endblock %}

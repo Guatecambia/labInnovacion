@@ -1,0 +1,89 @@
+{% extends 'core/base.html' %}
+{% load stripaccents %}
+{% load static %}
+{% load humanize %}
+{% load disqus_tags %}
+
+{% block added_libraries %}
+    <link rel="stylesheet" type="text/css" href="{% static 'core/css/stars.css' %}">
+    <script src="{% static 'core/js/star-rating-svg.min.js' %}" type="text/javascript"></script>
+    <script>
+        function vote(e, itemName) {
+            jQuery("#voteBtn-"+itemName).hide();
+            jQuery("#my-rating-"+itemName).starRating('setRating', 0);
+            jQuery("#my-rating-"+itemName).starRating('setReadOnly', false);
+            e.preventDefault();
+        }
+    </script>
+{% endblock %}
+
+{% block content %}
+    <div class="row">
+        <div class="col-xs-12">
+            <h2>{{ project.name }}</h2>
+            {% if project.pic %}
+                <img class="img-fluid" src="{{ project.pic.url }}">
+            {% endif %}
+            <h3>Datos de la obra</h3>
+            {% if project.desc %}
+                <p><h5>{{ project.desc }}</h5></p>
+            {% endif %}
+            <h5>Empresa: {{ project.firm }}</h5>
+            <h5>Costo: Q. {{ project.ammount|floatformat:2|intcomma }} </h5>
+            <h5>Porcentaje de ejecución de la obra: {{ project.execution }} %</h5>
+            <h5>Porcentaje de ejecución presupuestaria: {{ project.budgetExec }} %</h5>
+
+            <h3>Evaluación ciudadana</h3>
+            <div class="table-responsive">
+                <table class="table">
+                    {% for key, value in rates.items %}
+                        <tr>
+                            <td><h5 class="rateType">{{ key }}</h5></td>
+                            <td><div style="display:inline-block" id="my-rating-{{ key|cut:" " }}"></div></td>
+                            <td><span id="space-{{ key|cut:' ' }}" style="display:inline-block;"><a id="voteBtn-{{ key|cut:' ' }}" class="btn btn-primary btn-sm" href="#" onclick="vote(event,'{{ key|cut:' ' }}');" role="button">Votar</a></span></td>
+                        </tr>
+                    {% endfor %}
+                </table>
+            </div>
+        </div>
+    </div>
+    {% disqus_show_comments %}
+{% endblock %}
+
+{% block post_script %}
+    <script>
+        {% for key, value in rates.items %}
+            jQuery("#my-rating-{{ key|cut:' ' }}").starRating({
+                starSize: 25,
+                totalStars: 3,
+                useFullStars: true,
+                ratedColor: 'gold',
+                readOnly: true,
+                initialRating: {% if value != None %}{{ value }} {% else %} 0 {% endif %},
+                callback: function(currentRating, $el){
+                    jQuery('#space-{{ key|cut:' ' }}').html('<span style=\"color:#5388AE;\">Procesando...</span>');
+                    frmValues = {
+                        'proj': '{{ project.id }}',
+                        'item': '{{ key|cut:" " }}',
+                        'csrfmiddlewaretoken': '{{ csrf_token }}',
+                        'value':currentRating,
+                    };
+                    jQuery.ajax({
+                        url: '/proyecto/votacion',
+                        type: 'POST',
+                        data: frmValues,
+                        dataType: 'json',
+                        success: function(data) {
+                            console.log(data);
+                            jQuery('#space-{{ key|cut:' ' }}').html("<td><span style='color:#5388AE;'>Tu voto ha sido enviado</span></td>");
+                            jQuery("#my-rating-{{ key|cut:' ' }}").starRating('setRating', data['value']);
+                        },
+                        error: function() {
+                            jQuery('#space-{{ key|cut:' ' }}').html("<td><span style='color:#ff0000;'>Error, intenta de nuevo mas tarde</span></td>");
+                        }
+                    });
+                }
+            });
+        {%  endfor %}
+    </script>
+{% endblock %}
